@@ -1,0 +1,11 @@
+public class EmailManager 
+{
+     public static void SendMail(String Address, String Subject, String Body) {
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+        String[] toAddresses = new String[] {Address};
+        mail.setToAddresses(toAddresses);
+        mail.setSubject(Subject);
+        mail.setPlainTextBody(Body);
+        Messaging.SendMail(new Messaging.SingleEmailMessage[] { mail });
+    }
+}
