@@ -1,0 +1,213 @@
+/******************************************************************************************************************************
+* Name -   CaseTrigger
+* Desc -   This is a Trigger used to perform below operations on 'Case' Standard Object
+*		(i) Display case Priority to low when case Status has been closed
+*		(ii) Display error message when closed case status is been reopened
+*
+* Referrence: 1. https://developer.salesforce.com/forums/?id=906F000000093cKIAQ
+*             2. http://developer.force.com/cookbook/recipe/trigger-pattern-for-tidy-streamlined-bulkified-triggers
+*
+* Handler Class - CaseTriggerHandler
+* Handler Helper Class - CaseActions
+* Test Class -  CaseActions_Test
+*
+* Modification Log :
+* -----------------------
+* Developer Name               Date                Version          Description
+* -----------------          ------------        ------------      ---------------            
+* Raja Reddy Gaddam          2015-May-30           1.0               Created
+
+******************************************************************************************************************************/
+
+trigger CaseTrigger on Case( before insert, after insert, before update, after update, before delete, after delete, after undelete) {
+    CaseTriggerHandler handler = new CaseTriggerHandler(Trigger.isExecuting, Trigger.size);
+   
+	/* ---------------------- BEFORE---------EVENT---------------------- */
+	if(Trigger.isBefore) 
+	{    
+		if(Trigger.isInsert) 
+		{
+			// handler.OnBeforeInsert();
+		}
+		
+		else if(Trigger.isUpdate) 
+		{
+		    handler.OnBeforeUpdate(Trigger.newMap, Trigger.new);
+		}
+		
+		else if(Trigger.isDelete) 
+		{
+			// handler.OnBeforeDelete();
+		}
+	}
+
+	/* ---------------------- AFTER---------EVENT---------------------- */    
+	if(Trigger.isAfter) 
+	{    
+		if(Trigger.isInsert) 
+		{
+			// handler.OnAfterInsert(Trigger.new); 
+		}
+		
+		else if(Trigger.isUpdate) 
+		{
+			// handler.OnAfterUpdate(Trigger.newMap, Trigger.new);
+		}
+		
+		else if(Trigger.isDelete) 
+		{
+			// handler.OnAfterDelete();
+		}
+		
+		else if(Trigger.isUnDelete) 
+		{
+			// handler.OnAfterUnDelete();
+		}        
+	}
+}
+-------------------------------------------------------------------------------------------------
+/******************************************************************************************************************************
+* Name -   CaseTriggerHandler
+* Desc -   This is handler class to 'CaseTrigger' apex trigger
+*
+* Handler Helper Class - CaseActions
+* Test Class -  CaseActions_Test
+*
+* Modification Log :
+* -----------------------
+* Developer Name               Date                Version          Description
+* -----------------          ------------        ------------      -----------------            
+* Raja Reddy Gaddam          2015-May-30           1.0               Created
+
+******************************************************************************************************************************/
+
+public with sharing class CaseTriggerHandler {
+  
+    private Boolean bool = false;
+    private integer BatchSize = 0;
+
+    public CaseTriggerHandler(boolean isExecuting, integer size){
+        bool= isExecuting;
+        BatchSize = size;
+    }
+
+    public boolean IsTriggerContext{
+        get{ return bool;}
+    }
+    
+    public boolean IsVisualforcePageContext{
+        get{ return !IsTriggerContext;}
+    }
+    
+    public boolean IsWebServiceContext{
+        get{ return !IsTriggerContext;}
+    }
+    
+    public boolean IsExecuteAnonymousContext{
+        get{ return !IsTriggerContext;}
+    }
+    
+    public void OnBeforeInsert (Map<Id, Case> newMap)
+    {
+    
+    }
+    
+    public void OnAfterInsert(List<Case> newCases)
+    {
+         
+    }
+        
+    public void OnBeforeUpdate(Map<Id, Case> newMap, List<Case> newCases)
+    {
+         system.debug('ChangeStatusForClosedCases newMap ' + newMap);
+         system.debug('ChangeStatusForClosedCases newCase ' + newCases);
+         
+         CaseActions.ChangeStatusForClosedCases(newMap.keySet(), newCases);
+         CaseActions.NotifyOwnerOnClosedCaseUpdate(newMap.keySet(), newCases);         
+    }
+    
+    public void OnAfterUpdate(Map<Id, Case> newMap, List<Case> newCases)
+    {
+               
+    }
+    
+    public void OnBeforeDelete(Map<Id, Case> newMap)
+    {
+        
+    }
+    
+    public void OnAfterDelete(Map<Id, Case> newMap)
+    {
+        
+    }
+    
+    public void OnAfterUnDelete(Map<Id, Case> newMap)
+    {
+        
+    }   
+}
+--------------------------------------------------------------------------------------------
+/******************************************************************************************************************************
+* Name -   CaseActions
+* Desc -   This is helper class for 'CaseTriggerHandler' apex class used in 'CaseTrigger' trigger
+* Actions: 
+*		(i) Display case Priority to low when case Status has been closed
+*		(ii) Display error message when closed case status is been reopened
+*
+* Test Class -  CaseActions_Test
+*
+* Modification Log :
+* -----------------------
+* Developer Name               Date                Version          Description
+* -----------------          ------------        ------------      -----------------            
+* Raja Reddy Gaddam          2015-May-30           1.0               Created
+
+******************************************************************************************************************************/
+
+public with sharing class CaseActions {
+
+	/* Below method is used to display case priority to low when case status has been closed */
+	public static void ChangeStatusForClosedCases(Set<Id> newCaseIds, List<Case> newCases)
+	{
+		for(Case caseUpdated : newCases)
+		{
+			if (caseUpdated.Status == 'Closed')
+				caseUpdated.priority = 'Low';
+		} 
+	}
+    
+	/* Below method is used to display error message when closed case status is been reopened */
+	public static void NotifyOwnerOnClosedCaseUpdate(Set<Id> newCaseIds, List<Case> newCases) 
+	{
+		for (Case caseUpdated : newCases) 
+		{               
+			Case oldCase = (Case)Trigger.oldMap.get(caseUpdated.Id);
+			Case objError = (Case)Trigger.newMap.get(caseUpdated.Id);
+			
+			if(oldCase.Status == 'Closed' && oldCase.status != caseUpdated.status)
+			{
+				  objError.addError('Since the case has been closed, You cannot re-open the closed case.');                
+			}          
+		}
+	}
+}
+---------------------------------------------------------------------------------------------------------------------------------------------
+/******************************************************************************************************************************
+* Name -   CaseActions_Test
+* Desc -   This apex test class covers code coverages for 'CaseActions', 'CaseTriggerHandler' apex classes and 'CaseTrigger' trigger
+*
+* Utility or Test Data Class - TestDataUtility (Used for creating common data for all standard / custom object that exposes the common methods used in Test Classes)
+* 
+* Modification Log :
+* -----------------------
+* Developer Name               Date                Version          Description
+* -----------------          ------------        ------------      -----------------            
+* Raja Reddy Gaddam          2015-May-30           1.0               Created
+
+******************************************************************************************************************************/
+
+@isTest
+public class CaseActions_Test {
+	
+}
+	
