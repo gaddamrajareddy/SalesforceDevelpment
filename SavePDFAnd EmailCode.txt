@@ -1,0 +1,58 @@
+/*Method to Save the PDF as attachment*/
+    public PageReference savePdf() {
+ 		String parentId;
+	    PageReference pdf = Page.GPS_Quote;
+		pdf.getParameters().put('id',quoteId);
+	    Attachment attach = new Attachment();
+	 	QuoteDocument quoteAttach = new QuoteDocument();
+	 	
+	    Blob body;
+	    try {
+	    	 body = pdf.getContentAsPDF();
+	    
+	    	}
+	    catch (VisualforceException e) {
+	    	body = Blob.valueOf('No content in PDF');
+	    }
+	 	quoteAttach.Document = body;
+	 	quoteAttach.QuoteId = quoteId;
+	 	try{
+	 	insert quoteAttach;
+	 	}
+	 	catch(Exception exp){
+	 		system.debug('Exception: '+exp);
+	 	}
+	 	Pagereference redirect = new Pagereference(Label.GPS_BaseURL+quoteId);
+	    return redirect;
+  	}//END OF savePdf
+  	
+  	/*Method to save PDF as Attachment and Send Email */
+  	public PageReference saveAndEmail() {
+ 		String parentId;
+	    PageReference pdf = Page.GPS_Quote;
+	 	pdf.getParameters().put('id',quoteId);
+		String emailURL =Label.GPS_EmailBaseURL+quoteId+'&doc_id='; 
+	    Attachment attach = new Attachment();
+	 	
+	 	QuoteDocument quoteAttach = new QuoteDocument();
+	 	
+	    Blob body;
+	 
+	    try {
+	 
+	    	body = pdf.getContentAsPDF();
+	 
+	    } catch (VisualforceException e) {
+	    	body = Blob.valueOf('No content in PDF');
+	    }
+	 	quoteAttach.Document = body;
+	 	quoteAttach.QuoteId = quoteId;
+	 	try{
+	 		insert quoteAttach;
+	 	}
+	 	catch(Exception exp){
+	 		system.debug('Exception: '+exp);
+	 	}
+	 	Pagereference redirect = new Pagereference(emailURL+quoteAttach.Id+'&retURL=%2F'+quoteId);
+	    return redirect;
+  	}//END OF saveAndEmail
